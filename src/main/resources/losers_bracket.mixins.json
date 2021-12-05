@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.creativityshark.losers_bracket.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+  ],
+  "client": [
+    "LosersBracketMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

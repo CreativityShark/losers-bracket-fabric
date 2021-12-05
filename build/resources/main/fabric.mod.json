@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "losers_bracket",
+  "version": "1.18.1-0.0.1",
+
+  "name": "Loser's Bracket",
+  "description": "Takes scrapped mob ideas off the cutting room floor and adds them to the game",
+  "authors": [
+    "CreativityShark"
+  ],
+  "contact": {
+    "homepage": "",
+    "sources": ""
+  },
+
+  "license": "CC0-1.0",
+  "icon": "assets/losers_bracket/icon.png",
+
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "net.creativityshark.losers_bracket.LosersBracketMod"
+    ],
+    "client": [
+      "net.creativityshark.losers_bracket.LosersBracketClient"
+    ]
+  },
+  "mixins": [
+    "losers_bracket.mixins.json"
+  ],
+
+  "depends": {
+    "fabricloader": ">=0.11.3",
+    "fabric": "*",
+    "minecraft": "1.18.x",
+    "java": ">=17"
+  },
+  "suggests": {
+    "another-mod": "*"
+  }
+}
