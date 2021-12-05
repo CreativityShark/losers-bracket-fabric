@@ -169,12 +169,12 @@ public class GlareEntity extends AnimalEntity implements IAnimatable, Flutterer 
     private BlockPos getNearbyShade() {
         BlockPos blockPos = GlareEntity.this.getBlockPos();
         BlockPos nearShad = null;
-        for (int i = 0; i <= 32; i++) {
-            for (int j = 0; j <= 32; j++) {
-                for (int k = 0; k <= 32; k++) {
-                    BlockPos currentBlock = blockPos.add(-16 + i, -16 + j, -16 + k);
+        for (int i = 0; i <= 64; i++) {
+            for (int j = 0; j <= 64; j++) {
+                for (int k = 0; k <= 64; k++) {
+                    BlockPos currentBlock = blockPos.add(-32 + i, -32 + j, -32 + k);
                     if(
-                            GlareEntity.this.world.getLightLevel(currentBlock) <= 7 &&
+                            GlareEntity.this.world.getLightLevel(currentBlock) <= 0 &&
                             GlareEntity.this.world.getBlockState(currentBlock).isAir() &&
                             !GlareEntity.this.world.getBlockState(currentBlock.add(0, -1, 0)).isAir() &&
                             currentBlock.getY() >= 0 &&
@@ -258,7 +258,7 @@ public class GlareEntity extends AnimalEntity implements IAnimatable, Flutterer 
 
         @Override
         public boolean canStart() {
-            return (GlareEntity.this.shade != null && GlareEntity.this.world.getLightLevel(GlareEntity.this.shade) >= 8) || GlareEntity.this.ticksToFindShade >= 0;
+            return (GlareEntity.this.shade != null && GlareEntity.this.world.getLightLevel(GlareEntity.this.shade) >= 1) || GlareEntity.this.ticksToFindShade >= 0;
         }
 
         public boolean shouldContinue() {return false;}
@@ -281,7 +281,7 @@ public class GlareEntity extends AnimalEntity implements IAnimatable, Flutterer 
         }
 
         public boolean shouldContinue() {
-            return GlareEntity.this.world.getLightLevel(GlareEntity.this.getBlockPos()) <= 7 &&
+            return GlareEntity.this.world.getLightLevel(GlareEntity.this.getBlockPos()) <= 0 &&
                     GlareEntity.this.getBlockPos().getManhattanDistance(GlareEntity.this.shade) <= 1;
         }
 
@@ -290,12 +290,10 @@ public class GlareEntity extends AnimalEntity implements IAnimatable, Flutterer 
             GlareEntity.this.navigation.stop();
             GlareEntity.this.getNavigation().stop();
             GlareEntity.this.isNapping = true;
-            System.out.println("start");
         }
 
         public void stop() {
             GlareEntity.this.isNapping = false;
-            System.out.println("stop");
         }
     }
 
@@ -312,8 +310,8 @@ public class GlareEntity extends AnimalEntity implements IAnimatable, Flutterer 
         public boolean canStart() {
             return GlareEntity.this.shade != null &&
 
-                    GlareEntity.this.world.getLightLevel(GlareEntity.this.getBlockPos()) >= 8 &&
-                    GlareEntity.this.world.getLightLevel(GlareEntity.this.shade) <= 7;
+                    GlareEntity.this.world.getLightLevel(GlareEntity.this.getBlockPos()) >= 1 &&
+                    GlareEntity.this.world.getLightLevel(GlareEntity.this.shade) <= 0;
         }
 
         public boolean shouldContinue() {return this.canStart();}
