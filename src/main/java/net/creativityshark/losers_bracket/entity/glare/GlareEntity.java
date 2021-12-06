@@ -1,8 +1,7 @@
 package net.creativityshark.losers_bracket.entity.glare;
 
-import net.creativityshark.losers_bracket.entity.glare.GlareEntity.GlareFindShadeGoal;
-import net.creativityshark.losers_bracket.entity.glare.GlareEntity.GlareMoveToShadeGoal;
-import net.creativityshark.losers_bracket.entity.glare.GlareEntity.GlareNapGoal;
+import net.minecraft.client.gl.GlShader;
+import net.minecraft.command.BlockDataObject;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.Flutterer;
 import net.minecraft.entity.LivingEntity;
@@ -29,7 +28,9 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import org.apache.commons.compress.compressors.lz77support.LZ77Compressor;
 import org.jetbrains.annotations.Nullable;
+import software.bernie.example.registry.BlockRegistry;
 import software.bernie.geckolib3.core.IAnimatable;
 import software.bernie.geckolib3.core.PlayState;
 import software.bernie.geckolib3.core.builder.AnimationBuilder;
@@ -43,16 +44,31 @@ import java.util.EnumSet;
 public class GlareEntity extends AnimalEntity implements IAnimatable, Flutterer {
 
     int ticksToFindShade;
+    int ticksNapped = 0;
     boolean isNapping;
     BlockPos shade;
     GlareEntity.GlareMoveToShadeGoal glareMoveToShadeGoal;
 
-    private AnimationFactory factory = new AnimationFactory(this);
+    private final AnimationFactory factory = new AnimationFactory(this);
 
-    private <E extends IAnimatable> PlayState predicate(AnimationEvent<E> event)
-    {
-        event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.glare.fly", true));
-        return PlayState.CONTINUE;
+    public <E extends IAnimatable> PlayState predicate(AnimationEvent<E> event) {
+        System.out.println(this.getTicksNapped());
+        //Checks if Glare is napping
+        if (this.getTicksNapped() > 0) {
+            if (this.getTicksNapped() > 16) {
+                //Play intro anim
+                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.glare.naploop", true));
+                return PlayState.CONTINUE;
+            } else {
+                //Play nap anim
+                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.glare.napintro", false));
+                return PlayState.CONTINUE;
+            }
+        } else {
+            //Play default anim
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.glare.fly", true));
+            return PlayState.CONTINUE;
+        }
     }
 
     @Override
@@ -68,7 +84,7 @@ public class GlareEntity extends AnimalEntity implements IAnimatable, Flutterer 
 
     public GlareEntity(EntityType<? extends AnimalEntity> entityType, World world) {
         super(entityType, world);
-        this.moveControl = new FlightMoveControl(this, 20, true);
+        this.moveControl = new FlightMoveControl(this, 10, true);
         this.setPathfindingPenalty(PathNodeType.DANGER_FIRE, -1.0F);
         this.setPathfindingPenalty(PathNodeType.WATER, -1.0F);
         this.setPathfindingPenalty(PathNodeType.WATER_BORDER, 16.0F);
@@ -81,7 +97,7 @@ public class GlareEntity extends AnimalEntity implements IAnimatable, Flutterer 
         this.goalSelector.add(0, new SwimGoal(this));
         this.goalSelector.add(1, new TemptGoal(this, 1d, Ingredient.ofItems(Items.BONE_MEAL), false));
         this.goalSelector.add(2, new GlareFindShadeGoal());
-        //I have no idea why the move goal is all funky but it is like that in the bee code and I'm
+        //I have no idea why the move goal is all funky, but it is like that in the bee code, and I'm
         //too scared to change it
         this.glareMoveToShadeGoal = new GlareMoveToShadeGoal();
         this.goalSelector.add(2, glareMoveToShadeGoal);
@@ -140,9 +156,26 @@ public class GlareEntity extends AnimalEntity implements IAnimatable, Flutterer 
         return null;
     }
 
+    public void setTicksNapped(int ticks) {
+        this.ticksNapped = ticks;
+    }
+
+    public void setNapping(boolean nap) {
+        this.isNapping = nap;
+    }
+
+    public int getTicksNapped() {
+        return this.ticksNapped;
+    }
+
+    public boolean isNapping() {
+        System.out.println(this.isNapping);
+        return this.isNapping;
+    }
+
     @Override
     public boolean isInAir() {
-        return false;
+        return true;
     }
 
     boolean isTooFar(BlockPos pos) {
@@ -176,7 +209,7 @@ public class GlareEntity extends AnimalEntity implements IAnimatable, Flutterer 
                     if(
                             GlareEntity.this.world.getLightLevel(currentBlock) <= 0 &&
                             GlareEntity.this.world.getBlockState(currentBlock).isAir() &&
-                            !GlareEntity.this.world.getBlockState(currentBlock.add(0, -1, 0)).isAir() &&
+                            (GlareEntity.this.world.getBlockState(currentBlock.down()).isSolidBlock(GlareEntity.this.world, currentBlock.down())) &&
                             currentBlock.getY() >= 0 &&
                             (nearShad == null || GlareEntity.this.world.getLightLevel(currentBlock) <= GlareEntity.this.world.getLightLevel(nearShad)) &&
                             (nearShad == null || currentBlock.getManhattanDistance(blockPos) < nearShad.getManhattanDistance(blockPos))
@@ -277,23 +310,29 @@ public class GlareEntity extends AnimalEntity implements IAnimatable, Flutterer 
         }
 
         public boolean canStart() {
-            return GlareEntity.this.shade != null && GlareEntity.this.getBlockPos().getManhattanDistance(GlareEntity.this.shade) <= 1;
+            return GlareEntity.this.shade != null && GlareEntity.this.getBlockPos().getManhattanDistance(GlareEntity.this.shade) <= 0.5 && GlareEntity.this.getBlockPos().getY() <= GlareEntity.this.shade.getY();
         }
 
         public boolean shouldContinue() {
             return GlareEntity.this.world.getLightLevel(GlareEntity.this.getBlockPos()) <= 0 &&
-                    GlareEntity.this.getBlockPos().getManhattanDistance(GlareEntity.this.shade) <= 1;
+                    GlareEntity.this.getBlockPos().getManhattanDistance(GlareEntity.this.shade) <= 1 &&
+                    !GlareEntity.this.world.isAir(GlareEntity.this.getBlockPos().down(1));
         }
 
         public void start() {
             super.start();
             GlareEntity.this.navigation.stop();
             GlareEntity.this.getNavigation().stop();
-            GlareEntity.this.isNapping = true;
+            GlareEntity.this.setNapping(true);
         }
 
         public void stop() {
-            GlareEntity.this.isNapping = false;
+            GlareEntity.this.setNapping(false);
+            GlareEntity.this.setTicksNapped(0);
+        }
+
+        public void tick() {
+            GlareEntity.this.setTicksNapped(GlareEntity.this.getTicksNapped() + 1);
         }
     }
 
