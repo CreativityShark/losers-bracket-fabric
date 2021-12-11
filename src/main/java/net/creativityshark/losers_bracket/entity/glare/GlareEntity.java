@@ -1,7 +1,9 @@
 package net.creativityshark.losers_bracket.entity.glare;
 
-import net.minecraft.client.gl.GlShader;
-import net.minecraft.command.BlockDataObject;
+import net.creativityshark.losers_bracket.LosersBracketMod;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.Flutterer;
 import net.minecraft.entity.LivingEntity;
@@ -23,64 +25,24 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.recipe.Ingredient;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
-import org.apache.commons.compress.compressors.lz77support.LZ77Compressor;
 import org.jetbrains.annotations.Nullable;
-import software.bernie.example.registry.BlockRegistry;
-import software.bernie.geckolib3.core.IAnimatable;
-import software.bernie.geckolib3.core.PlayState;
-import software.bernie.geckolib3.core.builder.AnimationBuilder;
-import software.bernie.geckolib3.core.controller.AnimationController;
-import software.bernie.geckolib3.core.event.predicate.AnimationEvent;
-import software.bernie.geckolib3.core.manager.AnimationData;
-import software.bernie.geckolib3.core.manager.AnimationFactory;
 
 import java.util.EnumSet;
 
-public class GlareEntity extends AnimalEntity implements IAnimatable, Flutterer {
+public class GlareEntity extends AnimalEntity implements Flutterer {
 
     int ticksToFindShade;
-    int ticksNapped = 0;
+    int ticksNapped = 20;
     boolean isNapping;
     BlockPos shade;
     GlareEntity.GlareMoveToShadeGoal glareMoveToShadeGoal;
-
-    private final AnimationFactory factory = new AnimationFactory(this);
-
-    public <E extends IAnimatable> PlayState predicate(AnimationEvent<E> event) {
-        System.out.println(this.getTicksNapped());
-        //Checks if Glare is napping
-        if (this.getTicksNapped() > 0) {
-            if (this.getTicksNapped() > 16) {
-                //Play intro anim
-                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.glare.naploop", true));
-                return PlayState.CONTINUE;
-            } else {
-                //Play nap anim
-                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.glare.napintro", false));
-                return PlayState.CONTINUE;
-            }
-        } else {
-            //Play default anim
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.glare.fly", true));
-            return PlayState.CONTINUE;
-        }
-    }
-
-    @Override
-    public void registerControllers(AnimationData animationData) {
-        animationData.addAnimationController(new AnimationController(this, "glareController", 0, this::predicate));
-    }
-
-    @Override
-    public AnimationFactory getFactory()
-    {
-        return this.factory;
-    }
 
     public GlareEntity(EntityType<? extends AnimalEntity> entityType, World world) {
         super(entityType, world);
@@ -158,6 +120,14 @@ public class GlareEntity extends AnimalEntity implements IAnimatable, Flutterer 
 
     public void setTicksNapped(int ticks) {
         this.ticksNapped = ticks;
+
+        PacketByteBuf buf = PacketByteBufs.create();
+        buf.writeInt(ticks);
+        buf.writeInt(GlareEntity.this.getId());
+
+        for (ServerPlayerEntity player : PlayerLookup.tracking((ServerWorld) GlareEntity.this.world, GlareEntity.this.getBlockPos())) {
+            ServerPlayNetworking.send(player, LosersBracketMod.GLARE_TICKS_NAPPING_PACKET_ID, buf);
+        }
     }
 
     public void setNapping(boolean nap) {
@@ -166,11 +136,6 @@ public class GlareEntity extends AnimalEntity implements IAnimatable, Flutterer 
 
     public int getTicksNapped() {
         return this.ticksNapped;
-    }
-
-    public boolean isNapping() {
-        System.out.println(this.isNapping);
-        return this.isNapping;
     }
 
     @Override
